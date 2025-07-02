@@ -1,0 +1,41 @@
+services:
+  vault:
+    image: hashicorp/vault:latest
+    container_name: vault-server
+    ports:
+      - "8204:8204"
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=myroot
+      - VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:8204
+    cap_add:
+      - IPC_LOCK
+    networks:
+      - lab-network
+
+  vulnerable-app:
+    build: ./app
+    container_name: vulnerable-app
+    ports:
+      - "3000:3000"
+    environment:
+      - VAULT_ADDR=http://vault:8204
+      - VAULT_TOKEN=myroot
+    depends_on:
+      - vault
+    networks:
+      - lab-network
+
+  owasp-zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap-scanner
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./reports:/zap/wrk:rw
+    command: zap-webswing.sh
+    networks:
+      - lab-network
+
+networks:
+  lab-network:
+    driver: bridge

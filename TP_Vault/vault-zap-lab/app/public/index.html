@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vulnerable App - Lab</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .form-group { margin: 20px 0; }
+        input, button { padding: 10px; margin: 5px; }
+        .vulnerability { background: #ffe6e6; padding: 15px; margin: 10px 0; border-left: 4px solid #ff0000; }
+        .fixed { background: #e6ffe6; padding: 15px; margin: 10px 0; border-left: 4px solid #00cc00; }
+        .warning { color: #cc0000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lab Sécurité - Version Étudiant DevOps</h1>
+        
+        <div class="fixed">
+            <h3>✅ Vulnérabilités corrigées :</h3>
+            <ul>
+                <li>✅ Correction de l'injection SQL avec des requêtes paramétrées</li>
+                <li>✅ Protection contre le XSS en échappant les caractères dangereux</li>
+                <li>✅ Gestion sécurisée des secrets avec HashiCorp Vault</li>
+                <li>✅ Ajout d'authentification basique sur les endpoints sensibles</li>
+                <li>✅ Configuration d'en-têtes de sécurité (X-Frame-Options, X-Content-Type-Options)</li>
+                <li>✅ Suppression des informations sensibles des logs et réponses</li>
+            </ul>
+        </div>
+        
+        <h2>🧪 Test de connexion (Injection SQL corrigée)</h2>
+        <div class="form-group">
+            <input type="text" id="username" placeholder="Username" value="admin">
+            <input type="password" id="password" placeholder="Password" value="password">
+            <button onclick="login()">Se connecter</button>
+            <p><small>💡 Essayez avec: admin / password ou testez une injection SQL comme <code>admin' OR '1'='1' --</code></small></p>
+        </div>
+        
+        <h2>🛡️ Test XSS (maintenant sécurisé)</h2>
+        <div class="form-group">
+            <input type="text" id="xss" placeholder="Testez votre payload XSS" value="<script>alert('XSS')</script>">
+            <button onclick="testXSS()">Tester XSS</button>
+            <p><small class="warning">Cette tentative XSS est maintenant bloquée par l'échappement HTML</small></p>
+        </div>
+        
+        <h2>🔐 Test des endpoints protégés</h2>
+        <div class="form-group">
+            <button onclick="testProtectedEndpoint()">Tester /admin/users (nécessite authentification)</button>
+            <button onclick="testVaultIntegration()">Tester /secure/config (intégration Vault)</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Validation côté client
+            if (!username || !password) {
+                document.getElementById('result').innerHTML = 
+                    `<p style="color: red;">Erreur: Veuillez remplir tous les champs</p>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+                
+                // Stocker le token pour les tests d'endpoints protégés
+                if (result.token) {
+                    localStorage.setItem('authToken', result.token);
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<p style="color: red;">Erreur: ${error.message}</p>`;
+            }
+        }
+        
+        function testXSS() {
+            const payload = document.getElementById('xss').value;
+            window.open(`/profile/${encodeURIComponent(payload)}`, '_blank');
+        }
+        
+        async function testProtectedEndpoint() {
+            const token = localStorage.getItem('authToken');
+            
+            if (!token) {
+                document.getElementById('result').innerHTML = 
+                    `<p style="color: red;">Erreur: Veuillez vous connecter d'abord</p>`;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/admin/users', {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const result = await response.json();
+                document.getElementById('result').innerHTML = 
+                    `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<p style="color: red;">Erreur: ${error.message}</p>`;
+            }
+        }
+        
+        async function testVaultIntegration() {
+            console.log('Test de l\'intégration Vault...');
+            
+            try {
+                const response = await fetch('/secure/config');
+                const result = await response.json();
+                
+                document.getElementById('result').innerHTML = 
+                    `<h3>🔐 Test Vault:</h3><pre>${JSON.stringify(result, null, 2)}</pre>`;
+                    
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<p style="color: red;">❌ Erreur Vault: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

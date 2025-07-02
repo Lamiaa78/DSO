@@ -1,0 +1,8 @@
+version: "3.9"
+services:
+  web:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    environment:
+      - SECRET_KEY=key_secret
